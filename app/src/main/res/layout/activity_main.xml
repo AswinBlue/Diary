@@ -9,33 +9,71 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <CalendarView
-            android:id="@+id/calendarView2"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:layout_weight="30"
+            android:orientation="horizontal">
 
-        <View
-            android:id="@+id/divider"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="?android:attr/listDivider" />
+            <Button
+                android:id="@+id/date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <Button
+                android:id="@+id/time1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <Button
+                android:id="@+id/time2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <Switch
+                android:id="@+id/all_day_switch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="하루종일" />
+
+        </LinearLayout>
 
         <EditText
-            android:id="@+id/editText"
+            android:id="@+id/title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_weight="30"
             android:ems="10"
-            android:inputType="time" />
+            android:inputType="textPersonName"
+            tools:text="제목" />
 
-        <MultiAutoCompleteTextView
-            android:id="@+id/multiAutoCompleteTextView2"
+        <EditText
+            android:id="@+id/place"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="MultiAutoCompleteTextView" />
+            android:layout_weight="30"
+            android:ems="10"
+            android:inputType="textPersonName"
+            tools:text="위치" />
+
+        <EditText
+            android:id="@+id/body"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="30"
+            android:allowUndo="true"
+            android:cursorVisible="true"
+            android:ems="10"
+            android:gravity="top|left"
+            android:inputType="textMultiLine"
+            tools:text="내용" />
 
     </LinearLayout>
-
 </ScrollView>
