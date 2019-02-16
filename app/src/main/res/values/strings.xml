@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">DailyNote</string>
+    <string name="navigation_drawer_open">열림</string>
+    <string name="navigation_drawer_close">닫힘</string>
 </resources>
