@@ -2,4 +2,7 @@
     <string name="app_name">DailyNote</string>
     <string name="navigation_drawer_open">열림</string>
     <string name="navigation_drawer_close">닫힘</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

@@ -6,7 +6,7 @@
         <item android:title="다이어리">
             <menu>
                 <item
-                    android:id="@+id/calendar"
+                    android:id="@+id/menu_diary_calendar"
                     android:icon="@color/colorPrimary"
                     android:title="달력" />
                 <item android:title="reserved" />
@@ -15,7 +15,7 @@
         <item android:title="메모">
             <menu>
                 <item
-                    android:id="@+id/show"
+                    android:id="@+id/menu_memo_show"
                     android:icon="@color/colorPrimary"
                     android:title="보기"/>
                 <item

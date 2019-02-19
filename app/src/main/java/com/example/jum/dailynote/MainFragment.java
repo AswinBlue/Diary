@@ -22,17 +22,18 @@ import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
-import android.widget.Switch;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
@@ -66,7 +67,9 @@ import java.util.Locale;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
 
-public class MainFragment extends AppCompatActivity implements EasyPermissions.PermissionCallbacks {
+import static android.app.Activity.RESULT_OK;
+
+public class MainFragment extends Fragment implements EasyPermissions.PermissionCallbacks {
 
     //***************
     //variables
@@ -99,6 +102,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
     long now = System.currentTimeMillis();
     Date date = new Date(now);
     SimpleDateFormat sdf = new SimpleDateFormat();
+    java.util.Calendar calendar = java.util.Calendar.getInstance();
 
     EditText title;
     EditText place;
@@ -106,31 +110,51 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
     Button set_date;
     Button set_time1;
     Button set_time2;
-    Switch all_day_switch;
 
     DatePickerDialog date_dialog;
     TimePickerDialog time_dialog1;
     TimePickerDialog time_dialog2;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-// settings for functions
+// settings for Google Calendar API
+        // Google Calendar API 호출중에 표시되는 ProgressDialog
+        mProgress = new ProgressDialog(getContext());
+        mProgress.setMessage("Google Calendar API 호출 중입니다.");
+
+        // Google Calendar API 사용하기 위해 필요한 인증 초기화( 자격 증명 credentials, 서비스 객체 )
+        // OAuth 2.0를 사용하여 구글 계정 선택 및 인증하기 위한 준비
+        mCredential = GoogleAccountCredential.usingOAuth2(
+                getContext().getApplicationContext(),
+                Arrays.asList(SCOPES)
+        ).setBackOff(new ExponentialBackOff()); // I/O 예외 상황을 대비해서 백오프 정책 사용
+
+// settings for GPS
+        getLastLocation();  //get latest position
+
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_main, container, false);
+
+        // settings for functions
         // EditText settings
-        title = findViewById(R.id.title);
-        place = findViewById(R.id.place);
-        body = findViewById(R.id.body);
+        title = view.findViewById(R.id.title);
+        place = view.findViewById(R.id.place);
+        body = view.findViewById(R.id.body);
 
         // Dialogue for date and time
-        date_dialog = new DatePickerDialog(this, date_listener, 2013, 10, 22);
-        time_dialog1 = new TimePickerDialog(this, time_listener1, 15, 24, false);
-        time_dialog2 = new TimePickerDialog(this, time_listener2, 15, 24, false);
+        date_dialog = new DatePickerDialog(getContext(), date_listener, calendar.YEAR, calendar.MONTH, calendar.DATE);
+        time_dialog1 = new TimePickerDialog(getContext(), time_listener1, calendar.HOUR, calendar.MINUTE, false);
+        time_dialog2 = new TimePickerDialog(getContext(), time_listener2, calendar.HOUR, calendar.MINUTE, false);
 
         // button settings
-        set_date = (Button) findViewById(R.id.date);
-        set_time1 = (Button) findViewById(R.id.time1);
-        set_time2 = (Button) findViewById(R.id.time2);
+        set_date = (Button) view.findViewById(R.id.date);
+        set_time1 = (Button) view.findViewById(R.id.time1);
+        set_time2 = (Button) view.findViewById(R.id.time2);
 
         sdf.applyPattern("yyyy년 MM월 dd일");
         set_date.setText(sdf.format(date));
@@ -159,44 +183,22 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
             }
         });
 
-        actionBar = getActionBar();
+        //actionBar = getActionBar();
 
-// settings for Google Calendar API
-        // Google Calendar API 호출중에 표시되는 ProgressDialog
-        mProgress = new ProgressDialog(this);
-        mProgress.setMessage("Google Calendar API 호출 중입니다.");
-
-        // Google Calendar API 사용하기 위해 필요한 인증 초기화( 자격 증명 credentials, 서비스 객체 )
-        // OAuth 2.0를 사용하여 구글 계정 선택 및 인증하기 위한 준비
-        mCredential = GoogleAccountCredential.usingOAuth2(
-                getApplicationContext(),
-                Arrays.asList(SCOPES)
-        ).setBackOff(new ExponentialBackOff()); // I/O 예외 상황을 대비해서 백오프 정책 사용
-
-// settings for GPS
-        getLastLocation();  //get latest position
-    }//->onCreate
-
-
-    // settings for action bar
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.actionbar, menu);
-
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_save:
+        // settings for Floating Action Button
+        FloatingActionButton fab = (FloatingActionButton) view.findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
                 mID = 1;
                 getResultsFromApi();
-                return true;
-            default:
-                return false;
-        }
-    }
+                Snackbar.make(view, "다이어리 저장", Snackbar.LENGTH_LONG)
+                        .setAction("Action", null).show();
+            }
+        });
+
+        return view;
+    }//->onCreateView
 
     //***************
     //*****Listeners
@@ -205,7 +207,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
         @Override
         public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
             // 설정버튼 눌렀을 때
-            Toast.makeText(getApplicationContext(), hourOfDay + "시 " + minute + "분", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext().getApplicationContext(), hourOfDay + "시 " + minute + "분", Toast.LENGTH_SHORT).show();
             set_time1.setText(hourOfDay + "시 " + minute + "분");
         }
     };
@@ -213,14 +215,14 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
         @Override
         public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
             // 설정버튼 눌렀을 때
-            Toast.makeText(getApplicationContext(), hourOfDay + "시 " + minute + "분", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext().getApplicationContext(), hourOfDay + "시 " + minute + "분", Toast.LENGTH_SHORT).show();
             set_time2.setText(hourOfDay + "시 " + minute + "분");
         }
     };
     private DatePickerDialog.OnDateSetListener date_listener = new DatePickerDialog.OnDateSetListener() {
         @Override
         public void onDateSet(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
-            Toast.makeText(getApplicationContext(), year + "년 " + monthOfYear + "월 " + dayOfMonth + "일", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext().getApplicationContext(), year + "년 " + monthOfYear + "월 " + dayOfMonth + "일", Toast.LENGTH_SHORT).show();
             set_date.setText(year + "년 " + monthOfYear + "월 " + dayOfMonth + "일");
         }
     };
@@ -230,23 +232,20 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
         String calendarID = getCalendarID(calendarTitle);
 
         if (calendarID == null) {
-            Toast.makeText(getApplicationContext(), "Calendar를 먼저 생성하세요", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext().getApplicationContext(), "Calendar를 먼저 생성하세요", Toast.LENGTH_SHORT).show();
         }
 
         Event event = new Event()
                 .setSummary(title.getText().toString())
                 .setLocation(place.getText().toString())
                 .setDescription(body.getText().toString());
+        //.setEndTimeUnspecified();
 
-
-        java.util.Calendar calander;
-
-        calander = java.util.Calendar.getInstance();
         SimpleDateFormat simpledateformat;
         //simpledateformat = new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ssZ", Locale.KOREA);
         // Z에 대응하여 +0900이 입력되어 문제 생겨 수작업으로 입력
         simpledateformat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss+09:00", Locale.KOREA);
-        String datetime = simpledateformat.format(calander.getTime());
+        String datetime = simpledateformat.format(calendar.getTime());
 
         DateTime startDateTime = new DateTime(datetime);
         EventDateTime start = new EventDateTime()
@@ -266,10 +265,8 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
         //String[] recurrence = new String[]{"RRULE:FREQ=DAILY;COUNT=2"};
         //event.setRecurrence(Arrays.asList(recurrence));
 
-
         try {
             event = mService.events().insert(calendarID, event).execute();
-            Toast.makeText(getApplicationContext(), "저장 완료", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             e.printStackTrace();
             Log.e("Exception", "Exception : " + e.toString());
@@ -278,7 +275,6 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
         Log.e("Event", "created : " + event.getHtmlLink());
         String eventStrings = "created : " + event.getHtmlLink();
 
-        Toast.makeText(getApplicationContext(), "저장 완료", Toast.LENGTH_SHORT).show();
     }//->saveDiary
 
 
@@ -287,74 +283,83 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
     //***************
     private void getLastLocation() {
         // check GPS permission, and ask user to give
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        boolean check_permission = false;
+        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
-            // Toast.makeText(getApplicationContext(), "GPS 권한 오류", Toast.LENGTH_SHORT).show();
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+            // Toast.makeText(getContext().getApplicationContext(), "GPS 권한 오류", Toast.LENGTH_SHORT).show();
+            if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),
                         Manifest.permission.ACCESS_FINE_LOCATION)) {
                 } else {
-                    ActivityCompat.requestPermissions(this,
+                    ActivityCompat.requestPermissions(getActivity(),
                             new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                             MY_PERMISSIONS_REQUEST_FINE_LOCATION);
                 }
             }
 
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+            if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),
                         Manifest.permission.ACCESS_COARSE_LOCATION)) {
                 } else {
-                    ActivityCompat.requestPermissions(this,
+                    ActivityCompat.requestPermissions(getActivity(),
                             new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
                             MY_PERMISSIONS_REQUEST_COARSE_LOCATION);
                 }
             }
+        } else {
+            check_permission = true;
         }
 
-        lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        gCorder = new Geocoder(getBaseContext(), Locale.getDefault());
+        if (check_permission) {
+            lm = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
+            gCorder = new Geocoder(getActivity().getBaseContext(), Locale.getDefault());
 
-        final LocationListener mLocationListener = new LocationListener() {
-            public void onLocationChanged(Location location) {
-                //여기서 위치값이 갱신되면 이벤트가 발생한다.
-                //값은 Location 형태로 리턴되며 좌표 출력 방법은 다음과 같다.
-                if (location.getProvider().equals(LocationManager.GPS_PROVIDER)) {
-                    //Gps 위치제공자에 의한 위치변화. 오차범위가 좁다.
-                    double longitude = location.getLongitude();    //경도
-                    double latitude = location.getLatitude();         //위도
-                    float accuracy = location.getAccuracy();        //신뢰도
-                } else {
-                    //Network 위치제공자에 의한 위치변화
-                    //Network 위치는 Gps에 비해 정확도가 많이 떨어진다.
-                }
-            }
-            public void onProviderDisabled(String provider) {
-            }
-            public void onProviderEnabled(String provider) {
-            }
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-            }
-        };
 
-        lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 6000, 10, mLocationListener);
-
-        if (lm != null) {
-            location = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-            if(location != null) {
-                String placeName = "";
-                try {
-                    addresses = gCorder.getFromLocation(location.getLatitude(),
-                            location.getLongitude(), 1);
-                    if (addresses.size() > 0)
-                        System.out.println(addresses.get(0).getLocality());
-                    placeName = addresses.get(0).getLocality();
-                } catch (IOException e) {
-                    e.printStackTrace();
+            final LocationListener mLocationListener = new LocationListener() {
+                public void onLocationChanged(Location location) {
+                    //여기서 위치값이 갱신되면 이벤트가 발생한다.
+                    //값은 Location 형태로 리턴되며 좌표 출력 방법은 다음과 같다.
+                    if (location.getProvider().equals(LocationManager.GPS_PROVIDER)) {
+                        //Gps 위치제공자에 의한 위치변화. 오차범위가 좁다.
+                        double longitude = location.getLongitude();    //경도
+                        double latitude = location.getLatitude();         //위도
+                        float accuracy = location.getAccuracy();        //신뢰도
+                    } else {
+                        //Network 위치제공자에 의한 위치변화
+                        //Network 위치는 Gps에 비해 정확도가 많이 떨어진다.
+                    }
                 }
 
-                place.setText(placeName);
-            }//->if(location != null)
-        }
+                public void onProviderDisabled(String provider) {
+                }
+
+                public void onProviderEnabled(String provider) {
+                }
+
+                public void onStatusChanged(String provider, int status, Bundle extras) {
+                }
+            };
+
+            lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 6000, 10, mLocationListener);
+
+            if (lm != null) {
+                location = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                if (location != null) {
+                    String placeName = "";
+                    try {
+                        addresses = gCorder.getFromLocation(location.getLatitude(),
+                                location.getLongitude(), 1);
+                        if (addresses.size() > 0)
+                            System.out.println(addresses.get(0).getLocality());
+                        placeName = addresses.get(0).getLocality();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    place.setText(placeName);
+                }//->if(location != null)
+            }//->if (lm != null)
+        }//->if (check_permission)
     }//->getLastLocation
 
     //************************
@@ -382,7 +387,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
             chooseAccount();
         } else if (!isDeviceOnline()) {    // 인터넷을 사용할 수 없는 경우
 
-            Toast.makeText(getApplicationContext(), "No network connection available.", Toast.LENGTH_LONG).show();
+            Toast.makeText(getContext().getApplicationContext(), "No network connection available.", Toast.LENGTH_LONG).show();
         } else {
 
             // Google Calendar API 호출
@@ -399,7 +404,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
 
         GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
 
-        final int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(this);
+        final int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(getContext());
         return connectionStatusCode == ConnectionResult.SUCCESS;
     }
 
@@ -411,7 +416,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
     private void acquireGooglePlayServices() {
 
         GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
-        final int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(this);
+        final int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(getContext());
 
         if (apiAvailability.isUserResolvableError(connectionStatusCode)) {
 
@@ -430,7 +435,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
         GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
 
         Dialog dialog = apiAvailability.getErrorDialog(
-                MainFragment.this,
+                getActivity(),
                 connectionStatusCode,
                 REQUEST_GOOGLE_PLAY_SERVICES
         );
@@ -448,11 +453,11 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
     private void chooseAccount() {
 
         // GET_ACCOUNTS 권한을 가지고 있다면
-        if (EasyPermissions.hasPermissions(this, Manifest.permission.GET_ACCOUNTS)) {
+        if (EasyPermissions.hasPermissions(getContext(), Manifest.permission.GET_ACCOUNTS)) {
 
 
             // SharedPreferences에서 저장된 Google 계정 이름을 가져온다.
-            String accountName = getPreferences(Context.MODE_PRIVATE)
+            String accountName = getActivity().getPreferences(Context.MODE_PRIVATE)
                     .getString(PREF_ACCOUNT_NAME, null);
             if (accountName != null) {
 
@@ -475,7 +480,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
 
             // 사용자에게 GET_ACCOUNTS 권한을 요구하는 다이얼로그를 보여준다.(주소록 권한 요청함)
             EasyPermissions.requestPermissions(
-                    (Activity) this,
+                    (Activity) getContext(),
                     "This app needs to access your Google account (via Contacts).",
                     REQUEST_PERMISSION_GET_ACCOUNTS,
                     Manifest.permission.GET_ACCOUNTS);
@@ -489,7 +494,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
      */
 
     @Override
-    protected void onActivityResult(
+    public void onActivityResult(
             int requestCode,  // onActivityResult가 호출되었을 때 요청 코드로 요청을 구분
             int resultCode,   // 요청에 대한 결과 코드
             Intent data
@@ -503,7 +508,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
 
                 if (resultCode != RESULT_OK) {
 
-                    Toast.makeText(getApplicationContext(), "앱을 실행시키려면 구글 플레이 서비스가 필요합니다. 구글 플레이 서비스를 설치 후 다시 실행하세요.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext().getApplicationContext(), "앱을 실행시키려면 구글 플레이 서비스가 필요합니다. 구글 플레이 서비스를 설치 후 다시 실행하세요.", Toast.LENGTH_SHORT).show();
                 } else {
                     getResultsFromApi();
                 }
@@ -514,7 +519,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
                 if (resultCode == RESULT_OK && data != null && data.getExtras() != null) {
                     String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
                     if (accountName != null) {
-                        SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
+                        SharedPreferences settings = getActivity().getPreferences(Context.MODE_PRIVATE);
                         SharedPreferences.Editor editor = settings.edit();
                         editor.putString(PREF_ACCOUNT_NAME, accountName);
                         editor.apply();
@@ -546,7 +551,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, getContext());
     }
 
 
@@ -575,7 +580,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
      */
     private boolean isDeviceOnline() {
 
-        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        ConnectivityManager connMgr = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
 
         return (networkInfo != null && networkInfo.isConnected());
@@ -645,7 +650,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
         protected void onPreExecute() {
             // mStatusText.setText("");
             mProgress.show();
-            Toast.makeText(getApplicationContext(), "데이터 가져오는 중...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext().getApplicationContext(), "데이터 가져오는 중...", Toast.LENGTH_SHORT).show();
         }
 
 
@@ -655,12 +660,12 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
         @Override
         protected String doInBackground(Void... params) {
             try {
-                if ( mID == 1) {
+                if (mID == 1) {
                     //create calendar
                     //createCalendar("Diary");
                     //save calendar
                     saveDiary("Diary");
-                    return "";
+                    return "저장 완료";
                 }
             } catch (Exception e) {
                 mLastError = e;
@@ -722,7 +727,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
 
             if (ids == null) {
 
-                Toast.makeText(getApplicationContext(), "데이터 가져오는 중...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext().getApplicationContext(), "데이터 가져오는 중...", Toast.LENGTH_SHORT).show();
 
 
                 // 새로운 캘린더 생성
@@ -756,7 +761,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
                                 .execute();
 
                 // 새로 추가한 캘린더의 ID를 리턴
-                Toast.makeText(getApplicationContext(), ids, Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext().getApplicationContext(), ids, Toast.LENGTH_SHORT).show();
             }
         }
 
@@ -765,7 +770,7 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
         protected void onPostExecute(String output) {
 
             mProgress.hide();
-            Toast.makeText(getApplicationContext(), output, Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext().getApplicationContext(), output, Toast.LENGTH_SHORT).show();
 
             //if ( mID == 3 )   mResultText.setText(TextUtils.join("\n\n", eventStrings));
         }
@@ -784,10 +789,10 @@ public class MainFragment extends AppCompatActivity implements EasyPermissions.P
                             ((UserRecoverableAuthIOException) mLastError).getIntent(),
                             MainFragment.REQUEST_AUTHORIZATION);
                 } else {
-                    Toast.makeText(getApplicationContext(), "MakeRequestTask The following error occurred:\n" + mLastError.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext().getApplicationContext(), "MakeRequestTask The following error occurred:\n" + mLastError.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             } else {
-                Toast.makeText(getApplicationContext(), "요청 취소됨.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext().getApplicationContext(), "요청 취소됨.", Toast.LENGTH_SHORT).show();
             }
         }
     }
