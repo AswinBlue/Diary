@@ -110,6 +110,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     Button set_date;
     Button set_time1;
     Button set_time2;
+    Button image_load;
 
     DatePickerDialog date_dialog;
     TimePickerDialog time_dialog1;
@@ -132,7 +133,16 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
 
 // settings for GPS
         getLastLocation();  //get latest position
-
+// settings for account permission
+        // GET_ACCOUNTS 권한을 가지고 있지 않다면
+        if (!(EasyPermissions.hasPermissions(getContext(), Manifest.permission.GET_ACCOUNTS))) {
+            // 사용자에게 GET_ACCOUNTS 권한을 요구하는 다이얼로그를 보여준다.(주소록 권한 요청함)
+            EasyPermissions.requestPermissions(
+                    (Activity) getContext(),
+                    "This app needs to access your Google account (via Contacts).",
+                    REQUEST_PERMISSION_GET_ACCOUNTS,
+                    Manifest.permission.GET_ACCOUNTS);
+        }
     }
 
     @Override
@@ -155,6 +165,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         set_date = (Button) view.findViewById(R.id.date);
         set_time1 = (Button) view.findViewById(R.id.time1);
         set_time2 = (Button) view.findViewById(R.id.time2);
+        image_load = (Button) view.findViewById(R.id.addImage);
 
         sdf.applyPattern("yyyy년 MM월 dd일");
         set_date.setText(sdf.format(date));
