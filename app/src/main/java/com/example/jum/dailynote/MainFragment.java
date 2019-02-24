@@ -80,6 +80,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     private com.google.api.services.calendar.Calendar mService = null;
     GoogleAccountCredential mCredential;
 
+    static final int REQUEST_IMAGE = 100;
     static final int REQUEST_ACCOUNT_PICKER = 1000;
     static final int REQUEST_AUTHORIZATION = 1001;
     static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
@@ -100,8 +101,6 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     // variables for interfaces
     ActionBar actionBar;
     long now = System.currentTimeMillis();
-    Date date = new Date(now);
-    SimpleDateFormat sdf = new SimpleDateFormat();
     java.util.Calendar calendar = java.util.Calendar.getInstance();
 
     EditText title;
@@ -110,6 +109,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     Button set_date;
     Button set_time1;
     Button set_time2;
+    Date start_date, end_date;
     Button image_load;
 
     DatePickerDialog date_dialog;
@@ -143,6 +143,15 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
                     REQUEST_PERMISSION_GET_ACCOUNTS,
                     Manifest.permission.GET_ACCOUNTS);
         }
+// settings for repository permission
+        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.READ_EXTERNAL_STORAGE)!= PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),Manifest.permission.READ_EXTERNAL_STORAGE)) {
+            } else {
+                ActivityCompat.requestPermissions(getActivity(),
+                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                        1);
+            }
+        }
     }
 
     @Override
@@ -156,10 +165,17 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         place = view.findViewById(R.id.place);
         body = view.findViewById(R.id.body);
 
+        // year, month, day, hour, minute
+        int year = calendar.get(java.util.Calendar.YEAR);
+        int month = calendar.get(java.util.Calendar.MONTH) + 1;
+        int day = calendar.get(java.util.Calendar.DAY_OF_MONTH);
+        int hour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
+        int minute = calendar.get(java.util.Calendar.MINUTE);
+
         // Dialogue for date and time
-        date_dialog = new DatePickerDialog(getContext(), date_listener, calendar.YEAR, calendar.MONTH, calendar.DATE);
-        time_dialog1 = new TimePickerDialog(getContext(), time_listener1, calendar.HOUR, calendar.MINUTE, false);
-        time_dialog2 = new TimePickerDialog(getContext(), time_listener2, calendar.HOUR, calendar.MINUTE, false);
+        date_dialog = new DatePickerDialog(getContext(), date_listener, year, month-1, day);
+        time_dialog1 = new TimePickerDialog(getContext(), time_listener1, hour, minute, false);
+        time_dialog2 = new TimePickerDialog(getContext(), time_listener2, hour, minute, false);
 
         // button settings
         set_date = (Button) view.findViewById(R.id.date);
@@ -167,8 +183,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         set_time2 = (Button) view.findViewById(R.id.time2);
         image_load = (Button) view.findViewById(R.id.addImage);
 
-        sdf.applyPattern("yyyy년 MM월 dd일");
-        set_date.setText(sdf.format(date));
+        set_date.setText(""+year+"년 " + month + "월 " + day + "일");
         set_date.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -176,8 +191,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
             }
         });
 
-        sdf.applyPattern("HH시 mm분");
-        set_time1.setText(sdf.format(date));
+        set_time1.setText("" + hour + "시 " + minute + "분");
         set_time1.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -185,8 +199,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
             }
         });
 
-        sdf.applyPattern("HH시 mm분");
-        set_time2.setText(sdf.format(date));
+        set_time2.setText("" + hour + "시 " + minute + "분");
         set_time2.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -194,7 +207,25 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
             }
         });
 
-        //actionBar = getActionBar();
+        image_load.setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // check permission and load image
+                if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.READ_EXTERNAL_STORAGE)!= PackageManager.PERMISSION_GRANTED) {
+                    if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                        // get image by using intent
+                        Intent intent = new Intent();
+                        intent.setType("image/*");
+                        intent.setAction(Intent.ACTION_GET_CONTENT);
+                        startActivityForResult(intent, REQUEST_IMAGE); // onActivityResult를 자동으로 호출
+                    } else {
+                        ActivityCompat.requestPermissions(getActivity(),
+                                new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                                1);
+                    }
+                }
+            }
+        });
 
         // settings for Floating Action Button
         FloatingActionButton fab = (FloatingActionButton) view.findViewById(R.id.fab);
@@ -220,6 +251,11 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
             // 설정버튼 눌렀을 때
             Toast.makeText(getContext().getApplicationContext(), hourOfDay + "시 " + minute + "분", Toast.LENGTH_SHORT).show();
             set_time1.setText(hourOfDay + "시 " + minute + "분");
+
+            calendar.set(java.util.Calendar.MILLISECOND, 0);
+            calendar.set(java.util.Calendar.HOUR_OF_DAY,hourOfDay);
+            calendar.set(java.util.Calendar.MINUTE,minute);
+            start_date = calendar.getTime();
         }
     };
     private TimePickerDialog.OnTimeSetListener time_listener2 = new TimePickerDialog.OnTimeSetListener() {
@@ -228,6 +264,11 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
             // 설정버튼 눌렀을 때
             Toast.makeText(getContext().getApplicationContext(), hourOfDay + "시 " + minute + "분", Toast.LENGTH_SHORT).show();
             set_time2.setText(hourOfDay + "시 " + minute + "분");
+
+            calendar.set(java.util.Calendar.MILLISECOND, 0);
+            calendar.set(java.util.Calendar.HOUR_OF_DAY,hourOfDay);
+            calendar.set(java.util.Calendar.MINUTE,minute);
+            end_date = calendar.getTime();
         }
     };
     private DatePickerDialog.OnDateSetListener date_listener = new DatePickerDialog.OnDateSetListener() {
@@ -246,27 +287,31 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
             Toast.makeText(getContext().getApplicationContext(), "Calendar를 먼저 생성하세요", Toast.LENGTH_SHORT).show();
         }
 
+        // putting things you wrote to the calendar
         Event event = new Event()
                 .setSummary(title.getText().toString())
                 .setLocation(place.getText().toString())
                 .setDescription(body.getText().toString());
-        //.setEndTimeUnspecified();
 
+        // setting times
+        // TODO: GPS정보로 세계시간 사용하기
         SimpleDateFormat simpledateformat;
         //simpledateformat = new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ssZ", Locale.KOREA);
         // Z에 대응하여 +0900이 입력되어 문제 생겨 수작업으로 입력
         simpledateformat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss+09:00", Locale.KOREA);
-        String datetime = simpledateformat.format(calendar.getTime());
 
+        String datetime = simpledateformat.format(start_date);
+        Log.d("@@@", datetime);
         DateTime startDateTime = new DateTime(datetime);
         EventDateTime start = new EventDateTime()
                 .setDateTime(startDateTime)
                 .setTimeZone("Asia/Seoul");
         event.setStart(start);
 
+
+
+        datetime = simpledateformat.format(end_date);
         Log.d("@@@", datetime);
-
-
         DateTime endDateTime = new DateTime(datetime);
         EventDateTime end = new EventDateTime()
                 .setDateTime(endDateTime)
@@ -276,6 +321,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         //String[] recurrence = new String[]{"RRULE:FREQ=DAILY;COUNT=2"};
         //event.setRecurrence(Arrays.asList(recurrence));
 
+        // TODO : 그림, 시간 적용해서 저장
         try {
             event = mService.events().insert(calendarID, event).execute();
         } catch (Exception e) {
@@ -514,17 +560,13 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
 
 
         switch (requestCode) {
-
             case REQUEST_GOOGLE_PLAY_SERVICES:
-
                 if (resultCode != RESULT_OK) {
-
                     Toast.makeText(getContext().getApplicationContext(), "앱을 실행시키려면 구글 플레이 서비스가 필요합니다. 구글 플레이 서비스를 설치 후 다시 실행하세요.", Toast.LENGTH_SHORT).show();
                 } else {
                     getResultsFromApi();
                 }
                 break;
-
 
             case REQUEST_ACCOUNT_PICKER:
                 if (resultCode == RESULT_OK && data != null && data.getExtras() != null) {
@@ -540,11 +582,15 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
                 }
                 break;
 
-
             case REQUEST_AUTHORIZATION:
-
                 if (resultCode == RESULT_OK) {
                     getResultsFromApi();
+                }
+                break;
+
+            case REQUEST_IMAGE:
+                if (resultCode == RESULT_OK){
+                    // TODO: 이미지 넣는 코드
                 }
                 break;
         }
