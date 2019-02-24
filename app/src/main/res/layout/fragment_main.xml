@@ -6,20 +6,21 @@
     android:layout_height="match_parent"
     tools:context=".MainFragment">
 
-    <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:fillViewport="true"
         android:orientation="horizontal">
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="vertical">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="30"
+                android:layout_weight="1"
                 android:orientation="horizontal">
 
                 <Button
@@ -51,14 +52,14 @@
                     android:background="@android:drawable/ic_menu_gallery"
                     android:backgroundTint="@color/colorPrimary"
                     android:backgroundTintMode="multiply"
-                    android:padding="10dp" />
+                    android:padding="20dp" />
 
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="30"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:orientation="horizontal">
 
                 <TextView
@@ -81,8 +82,8 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="30"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:orientation="horizontal">
 
                 <TextView
@@ -104,8 +105,8 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="30"
+                android:layout_height="wrap_content"
+                android:layout_weight="7"
                 android:orientation="horizontal">
 
                 <TextView
@@ -128,17 +129,16 @@
                     tools:text="내용" />
             </LinearLayout>
 
-            <android.support.design.widget.FloatingActionButton
-                android:id="@+id/fab"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|right|end"
-                android:layout_weight="30"
-                android:clickable="true"
-                android:src="@android:drawable/ic_menu_save"
-                app:backgroundTint="@color/colorPrimary" />
-
         </LinearLayout>
 
     </ScrollView>
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fab"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|right|end"
+        android:clickable="true"
+        android:src="@android:drawable/ic_menu_save"
+        app:backgroundTint="@color/colorPrimary" />
 </FrameLayout>
