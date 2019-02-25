@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" /><!--GPS1-->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" /><!--GPS2-->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /><!--저장소-->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /><!--저장소-->
 
 
     <application

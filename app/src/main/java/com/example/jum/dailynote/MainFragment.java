@@ -25,6 +25,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
@@ -32,6 +33,8 @@ import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -39,6 +42,8 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
@@ -98,13 +103,12 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     private static final String[] SCOPES = {CalendarScopes.CALENDAR};
     ProgressDialog mProgress;
 
+
     // variables for GPS
     LocationManager lm;
     Location location;
     Geocoder gCorder;
     List<Address> addresses;
-    int MY_PERMISSIONS_REQUEST_FINE_LOCATION = 0;
-    int MY_PERMISSIONS_REQUEST_COARSE_LOCATION = 1;
 
     // variables for interfaces
     ActionBar actionBar;
@@ -117,7 +121,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     Button set_date;
     Button set_time1;
     Button set_time2;
-    Date start_date  = calendar.getTime();
+    Date start_date = calendar.getTime();
     Date end_date = calendar.getTime();
     Button image_load;
 
@@ -126,6 +130,14 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     TimePickerDialog time_dialog2;
 
     ArrayList<Uri> file_to_attach = new ArrayList<Uri>();
+
+    RecyclerView mRecyclerView;
+    RecyclerView.LayoutManager mLayoutManager;
+    RV_Adapter mAdapter;
+    // variables for permissions
+    int MY_PERMISSIONS_REQUEST_FINE_LOCATION = 0;
+    int MY_PERMISSIONS_REQUEST_COARSE_LOCATION = 1;
+    int MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 2;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -155,12 +167,12 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
                     Manifest.permission.GET_ACCOUNTS);
         }
 // settings for repository permission
-        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.READ_EXTERNAL_STORAGE)!= PackageManager.PERMISSION_GRANTED) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),Manifest.permission.READ_EXTERNAL_STORAGE)) {
+        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(), Manifest.permission.READ_EXTERNAL_STORAGE)) {
             } else {
                 ActivityCompat.requestPermissions(getActivity(),
                         new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                        1);
+                        MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
             }
         }
     }
@@ -184,7 +196,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         int minute = calendar.get(java.util.Calendar.MINUTE);
 
         // Dialogue for date and time
-        date_dialog = new DatePickerDialog(getContext(), date_listener, year, month-1, day);
+        date_dialog = new DatePickerDialog(getContext(), date_listener, year, month - 1, day);
         time_dialog1 = new TimePickerDialog(getContext(), time_listener1, hour, minute, false);
         time_dialog2 = new TimePickerDialog(getContext(), time_listener2, hour, minute, false);
 
@@ -194,7 +206,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         set_time2 = (Button) view.findViewById(R.id.time2);
         image_load = (Button) view.findViewById(R.id.addImage);
 
-        set_date.setText(""+year+"년 " + month + "월 " + day + "일");
+        set_date.setText("" + year + "년 " + month + "월 " + day + "일");
         set_date.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -222,21 +234,28 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
             @Override
             public void onClick(View v) {
                 // check permission and load image
-                if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.READ_EXTERNAL_STORAGE)!= PackageManager.PERMISSION_GRANTED) {
-                    if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),Manifest.permission.READ_EXTERNAL_STORAGE)) {
-                        // get image by using intent
-                        Intent intent = new Intent();
-                        intent.setType("image/*");
-                        intent.setAction(Intent.ACTION_GET_CONTENT);
-                        startActivityForResult(intent, REQUEST_IMAGE_GALLARY); // onActivityResult를 자동으로 호출
-                    } else {
-                        ActivityCompat.requestPermissions(getActivity(),
-                                new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                                1);
-                    }
+                if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                    // get image by using intent
+                    Intent intent = new Intent();
+                    intent.setType("image/*");
+                    intent.setAction(Intent.ACTION_GET_CONTENT);
+                    startActivityForResult(intent, REQUEST_IMAGE_GALLARY); // onActivityResult를 자동으로 호출
+                } else {
+                    ActivityCompat.requestPermissions(getActivity(),
+                            new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                            MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
                 }
-            }
+            }//->onClick
         });
+
+        // settings for recycler view
+        mRecyclerView = view.findViewById(R.id.img_recycler_view);
+        mRecyclerView.setHasFixedSize(true);
+        mLayoutManager = new LinearLayoutManager(getContext());
+        mRecyclerView.setLayoutManager(mLayoutManager);
+
+        mAdapter = new RV_Adapter(file_to_attach);
+        mRecyclerView.setAdapter(mAdapter);
 
         // settings for Floating Action Button
         FloatingActionButton fab = (FloatingActionButton) view.findViewById(R.id.fab);
@@ -264,8 +283,8 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
             set_time1.setText(hourOfDay + "시 " + minute + "분");
 
             calendar.set(java.util.Calendar.MILLISECOND, 0);
-            calendar.set(java.util.Calendar.HOUR_OF_DAY,hourOfDay);
-            calendar.set(java.util.Calendar.MINUTE,minute);
+            calendar.set(java.util.Calendar.HOUR_OF_DAY, hourOfDay);
+            calendar.set(java.util.Calendar.MINUTE, minute);
             start_date = calendar.getTime();
         }
     };
@@ -277,8 +296,8 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
             set_time2.setText(hourOfDay + "시 " + minute + "분");
 
             calendar.set(java.util.Calendar.MILLISECOND, 0);
-            calendar.set(java.util.Calendar.HOUR_OF_DAY,hourOfDay);
-            calendar.set(java.util.Calendar.MINUTE,minute);
+            calendar.set(java.util.Calendar.HOUR_OF_DAY, hourOfDay);
+            calendar.set(java.util.Calendar.MINUTE, minute);
             end_date = calendar.getTime();
         }
     };
@@ -294,15 +313,16 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     //***** picture treatment
     //***********************
     private String getRealPathFromURI(Uri contentUri) {
-        int column_index=0;
+        int column_index = 0;
         String[] proj = {MediaStore.Images.Media.DATA};
         Cursor cursor = getContext().getContentResolver().query(contentUri, proj, null, null, null);
-        if(cursor.moveToFirst()){
+        if (cursor.moveToFirst()) {
             column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
         }
 
         return cursor.getString(column_index);
     }
+
     private int exifOrientationToDegrees(int exifOrientation) {
         if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_90) {
             return 90;
@@ -358,6 +378,9 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         //event.setRecurrence(Arrays.asList(recurrence));
 
         // TODO : 그림, 시간 적용해서 저장
+        addAttachments(event);
+
+        // final uploading
         try {
             event = mService.events().insert(calendarID, event).execute();
         } catch (Exception e) {
@@ -370,14 +393,14 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
 
     }//->saveDiary
 
-    private void addAttachments(Event event){
+    private void addAttachments(Event event) {
         List<EventAttachment> attachments = event.getAttachments();
         if (attachments == null) {
             attachments = new ArrayList<EventAttachment>();
         }
 
         ContentResolver cr = getActivity().getContentResolver();
-        for(Uri uri : file_to_attach) {
+        for (Uri uri : file_to_attach) {
             try {
                 attachments.add(new EventAttachment()
                         .setFileUrl((new URL(uri.toString())).toString())
@@ -387,6 +410,48 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    //***********************
+    //***** for Recycler View
+    //***********************
+    public class RV_Adapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>  {
+        public class MyViewHolder extends RecyclerView.ViewHolder {
+
+            ImageView Picture;
+            TextView PictureName;
+
+            MyViewHolder(View view){
+                super(view);
+                Picture = view.findViewById(R.id.selected_picture);
+                PictureName = view.findViewById(R.id.selected_picture_name);
+            }
+
+        }
+
+        private ArrayList<Uri> uriArrayList;
+
+        RV_Adapter(ArrayList<Uri> foodInfoArrayList){
+            this.uriArrayList = foodInfoArrayList;
+        }
+
+        @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.revycler_view_item_image, parent, false);
+            return new MyViewHolder(v);
+        }
+
+        @Override
+        public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
+            MyViewHolder myViewHolder = (MyViewHolder) holder;
+            myViewHolder.Picture.setImageURI(Uri.parse("file:///" + Environment.getExternalStorageDirectory() + uriArrayList.get(position)));
+            myViewHolder.PictureName.setText(uriArrayList.get(position).getPath());
+        }
+
+        @Override
+        public int getItemCount() {
+            return uriArrayList.size();
         }
     }
 
@@ -644,9 +709,10 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
                 break;
 
             case REQUEST_IMAGE_GALLARY:
-                if (resultCode == RESULT_OK){
+                if (resultCode == RESULT_OK) {
                     // TODO: 이미지 넣는 코드
                     file_to_attach.add(data.getData());
+                    mAdapter.notifyDataSetChanged();
                     /*
                     String imagePath = getRealPathFromURI(data.getData());
                     ExifInterface exif = null;
@@ -657,8 +723,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
                     }
                     int exifOrientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
                     int exifDegree = exifOrientationToDegrees(exifOrientation);
-*/
-
+                    */
                 }
                 break;
         }
