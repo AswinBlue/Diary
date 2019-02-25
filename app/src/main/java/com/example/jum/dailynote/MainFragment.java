@@ -117,7 +117,8 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     Button set_date;
     Button set_time1;
     Button set_time2;
-    Date start_date, end_date;
+    Date start_date  = calendar.getTime();
+    Date end_date = calendar.getTime();
     Button image_load;
 
     DatePickerDialog date_dialog;
