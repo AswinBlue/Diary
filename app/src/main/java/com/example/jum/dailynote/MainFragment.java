@@ -74,8 +74,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
@@ -109,6 +111,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     Location location;
     Geocoder gCorder;
     List<Address> addresses;
+    String placeName = "";
 
     // variables for interfaces
     ActionBar actionBar;
@@ -129,7 +132,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     TimePickerDialog time_dialog1;
     TimePickerDialog time_dialog2;
 
-    ArrayList<Uri> file_to_attach = new ArrayList<Uri>();
+    ArrayList<Uri> img_to_attach = new ArrayList<Uri>();
 
     RecyclerView mRecyclerView;
     RecyclerView.LayoutManager mLayoutManager;
@@ -187,6 +190,8 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         title = view.findViewById(R.id.title);
         place = view.findViewById(R.id.place);
         body = view.findViewById(R.id.body);
+
+        place.setText(placeName);
 
         // year, month, day, hour, minute
         int year = calendar.get(java.util.Calendar.YEAR);
@@ -254,7 +259,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         mLayoutManager = new LinearLayoutManager(getContext());
         mRecyclerView.setLayoutManager(mLayoutManager);
 
-        mAdapter = new RV_Adapter(file_to_attach);
+        mAdapter = new RV_Adapter(img_to_attach);
         mRecyclerView.setAdapter(mAdapter);
 
         // settings for Floating Action Button
@@ -400,7 +405,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         }
 
         ContentResolver cr = getActivity().getContentResolver();
-        for (Uri uri : file_to_attach) {
+        for (Uri uri : img_to_attach) {
             try {
                 attachments.add(new EventAttachment()
                         .setFileUrl((new URL(uri.toString())).toString())
@@ -418,12 +423,13 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     //***********************
     public class RV_Adapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>  {
         public class MyViewHolder extends RecyclerView.ViewHolder {
-
+            View mView;
             ImageView Picture;
             TextView PictureName;
 
             MyViewHolder(View view){
                 super(view);
+                mView = view;
                 Picture = view.findViewById(R.id.selected_picture);
                 PictureName = view.findViewById(R.id.selected_picture_name);
             }
@@ -431,9 +437,8 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         }
 
         private ArrayList<Uri> uriArrayList;
-
-        RV_Adapter(ArrayList<Uri> foodInfoArrayList){
-            this.uriArrayList = foodInfoArrayList;
+        RV_Adapter(ArrayList<Uri> imgArrayList){
+            this.uriArrayList = imgArrayList;
         }
 
         @Override
@@ -443,10 +448,20 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         }
 
         @Override
-        public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
+        public void onBindViewHolder(RecyclerView.ViewHolder holder, final int position) {
             MyViewHolder myViewHolder = (MyViewHolder) holder;
             myViewHolder.Picture.setImageURI(Uri.parse("file:///" + Environment.getExternalStorageDirectory() + uriArrayList.get(position)));
             myViewHolder.PictureName.setText(uriArrayList.get(position).getPath());
+
+            ((MyViewHolder) holder).mView.setOnLongClickListener(new View.OnLongClickListener(){
+                @Override
+                public boolean onLongClick(View v) {
+                    uriArrayList.remove(position); // ArrayList에서 제거하는 작업
+                    notifyItemRemoved(position); // adapter에 삭제를 알려 refresh 하게 함
+                    notifyItemRangeChanged(position, uriArrayList.size()); // position 이 변경되게 하는 함수
+                    return false;
+                }
+            });
         }
 
         @Override
@@ -522,18 +537,15 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
             if (lm != null) {
                 location = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                 if (location != null) {
-                    String placeName = "";
                     try {
                         addresses = gCorder.getFromLocation(location.getLatitude(),
                                 location.getLongitude(), 1);
                         if (addresses.size() > 0)
                             System.out.println(addresses.get(0).getLocality());
-                        placeName = addresses.get(0).getLocality();
+                        placeName = addresses.get(0).getAddressLine(0);//getLocality() 대신 getAddressLine(INDEX) 사용한 것
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-
-                    place.setText(placeName);
                 }//->if(location != null)
             }//->if (lm != null)
         }//->if (check_permission)
@@ -711,7 +723,12 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
             case REQUEST_IMAGE_GALLARY:
                 if (resultCode == RESULT_OK) {
                     // TODO: 이미지 넣는 코드
-                    file_to_attach.add(data.getData());
+                    if(!img_to_attach.contains((data.getData())))
+                        img_to_attach.add(data.getData());
+
+//                    Set<Uri> uriSet = new HashSet<>(img_to_attach);
+//                    img_to_attach = new ArrayList<>(uriSet);
+
                     mAdapter.notifyDataSetChanged();
                     /*
                     String imagePath = getRealPathFromURI(data.getData());
