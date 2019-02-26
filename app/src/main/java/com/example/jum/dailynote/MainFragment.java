@@ -32,6 +32,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -114,8 +115,8 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     String placeName = "";
 
     // variables for interfaces
-    ActionBar actionBar;
-    long now = System.currentTimeMillis();
+
+    FragmentManager mFragmentManager;
     java.util.Calendar calendar = java.util.Calendar.getInstance();
 
     EditText title;
@@ -145,7 +146,9 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-// settings for Google Calendar API
+
+        mFragmentManager = getActivity().getSupportFragmentManager();
+        // settings for Google Calendar API
         // Google Calendar API 호출중에 표시되는 ProgressDialog
         mProgress = new ProgressDialog(getContext());
         mProgress.setMessage("Google Calendar API 호출 중입니다.");
@@ -395,7 +398,6 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         System.out.printf("Event created: %s\n", event.getHtmlLink());
         Log.e("Event", "created : " + event.getHtmlLink());
         String eventStrings = "created : " + event.getHtmlLink();
-
     }//->saveDiary
 
     private void addAttachments(Event event) {
@@ -406,28 +408,23 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
 
         ContentResolver cr = getActivity().getContentResolver();
         for (Uri uri : img_to_attach) {
-            try {
-                attachments.add(new EventAttachment()
-                        .setFileUrl((new URL(uri.toString())).toString())
-                        .setMimeType(cr.getType(uri))
-                        .setTitle(uri.getPath())
-                );
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            }
+            attachments.add(new EventAttachment()
+                    .setFileUrl(uri.toString())
+                    .setMimeType(cr.getType(uri))
+                    .setTitle(uri.getPath()));
         }
     }
 
     //***********************
     //***** for Recycler View
     //***********************
-    public class RV_Adapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>  {
+    public class RV_Adapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         public class MyViewHolder extends RecyclerView.ViewHolder {
             View mView;
             ImageView Picture;
             TextView PictureName;
 
-            MyViewHolder(View view){
+            MyViewHolder(View view) {
                 super(view);
                 mView = view;
                 Picture = view.findViewById(R.id.selected_picture);
@@ -437,7 +434,8 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         }
 
         private ArrayList<Uri> uriArrayList;
-        RV_Adapter(ArrayList<Uri> imgArrayList){
+
+        RV_Adapter(ArrayList<Uri> imgArrayList) {
             this.uriArrayList = imgArrayList;
         }
 
@@ -453,7 +451,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
             myViewHolder.Picture.setImageURI(uriArrayList.get(position)); //Uri.parse("file:///" + Environment.getExternalStorageDirectory() + "/" + uriArrayList.get(position)) 아니다, uri의 종류가 content여서 안되는듯?
             myViewHolder.PictureName.setText(uriArrayList.get(position).getPath());
 
-            ((MyViewHolder) holder).mView.setOnLongClickListener(new View.OnLongClickListener(){
+            ((MyViewHolder) holder).mView.setOnLongClickListener(new View.OnLongClickListener() {
                 @Override
                 public boolean onLongClick(View v) {
                     uriArrayList.remove(position); // ArrayList에서 제거하는 작업
@@ -723,7 +721,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
             case REQUEST_IMAGE_GALLARY:
                 if (resultCode == RESULT_OK) {
                     // TODO: 이미지 넣는 코드
-                    if(!img_to_attach.contains((data.getData())))
+                    if (!img_to_attach.contains((data.getData())))
                         img_to_attach.add(data.getData());
 
 //                    Set<Uri> uriSet = new HashSet<>(img_to_attach);
@@ -977,8 +975,11 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
 
             mProgress.hide();
             Toast.makeText(getContext().getApplicationContext(), output, Toast.LENGTH_SHORT).show();
-
             //if ( mID == 3 )   mResultText.setText(TextUtils.join("\n\n", eventStrings));
+
+            // stop fragment
+            mFragmentManager.beginTransaction().remove(MainFragment.this).commit();
+            mFragmentManager.popBackStack();
         }
 
 
