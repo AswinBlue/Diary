@@ -450,7 +450,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, final int position) {
             MyViewHolder myViewHolder = (MyViewHolder) holder;
-            myViewHolder.Picture.setImageURI(Uri.parse("file:///" + Environment.getExternalStorageDirectory() + uriArrayList.get(position)));
+            myViewHolder.Picture.setImageURI(uriArrayList.get(position)); //Uri.parse("file:///" + Environment.getExternalStorageDirectory() + "/" + uriArrayList.get(position)) 아니다, uri의 종류가 content여서 안되는듯?
             myViewHolder.PictureName.setText(uriArrayList.get(position).getPath());
 
             ((MyViewHolder) holder).mView.setOnLongClickListener(new View.OnLongClickListener(){
