@@ -2,7 +2,6 @@ package com.example.jum.dailynote;
 
 import android.Manifest;
 import android.accounts.AccountManager;
-import android.app.ActionBar;
 import android.app.Activity;
 import android.app.DatePickerDialog;
 import android.app.Dialog;
@@ -25,7 +24,6 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
@@ -69,16 +67,12 @@ import com.google.api.services.calendar.model.EventDateTime;
 import com.google.api.services.calendar.model.Events;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
@@ -204,7 +198,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         int minute = calendar.get(java.util.Calendar.MINUTE);
 
         // Dialogue for date and time
-        date_dialog = new DatePickerDialog(getContext(), date_listener, year, month - 1, day);
+        date_dialog = new DatePickerDialog(getContext(), date_listener, year, month-1, day);
         time_dialog1 = new TimePickerDialog(getContext(), time_listener1, hour, minute, false);
         time_dialog2 = new TimePickerDialog(getContext(), time_listener2, hour, minute, false);
 
@@ -312,6 +306,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     private DatePickerDialog.OnDateSetListener date_listener = new DatePickerDialog.OnDateSetListener() {
         @Override
         public void onDateSet(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
+            monthOfYear++;
             Toast.makeText(getContext().getApplicationContext(), year + "년 " + monthOfYear + "월 " + dayOfMonth + "일", Toast.LENGTH_SHORT).show();
             set_date.setText(year + "년 " + monthOfYear + "월 " + dayOfMonth + "일");
         }
@@ -345,7 +340,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
     //**********************
     //***** my own functions
     //**********************
-    private void saveDiary(String calendarTitle) {
+    private boolean saveDiary(String calendarTitle) {
         // save diary
         String calendarID = getCalendarID(calendarTitle);
 
@@ -394,10 +389,12 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
         } catch (Exception e) {
             e.printStackTrace();
             Log.e("Exception", "Exception : " + e.toString());
+            return false;
         }
         System.out.printf("Event created: %s\n", event.getHtmlLink());
         Log.e("Event", "created : " + event.getHtmlLink());
         String eventStrings = "created : " + event.getHtmlLink();
+        return true;
     }//->saveDiary
 
     private void addAttachments(Event event) {
@@ -538,9 +535,12 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
                     try {
                         addresses = gCorder.getFromLocation(location.getLatitude(),
                                 location.getLongitude(), 1);
-                        if (addresses.size() > 0)
-                            System.out.println(addresses.get(0).getLocality());
-                        placeName = addresses.get(0).getAddressLine(0);//getLocality() 대신 getAddressLine(INDEX) 사용한 것
+                        if(addresses != null) {
+                            if (addresses.size() > 0) {
+                                System.out.println(addresses.get(0).getLocality());
+                                placeName = addresses.get(0).getAddressLine(0);//getLocality() 대신 getAddressLine(INDEX) 사용한 것
+                            }
+                        }
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -720,7 +720,7 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
 
             case REQUEST_IMAGE_GALLARY:
                 if (resultCode == RESULT_OK) {
-                    // TODO: 이미지 넣는 코드
+                    // add image to the list
                     if (!img_to_attach.contains((data.getData())))
                         img_to_attach.add(data.getData());
 
@@ -863,20 +863,24 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
          */
         @Override
         protected String doInBackground(Void... params) {
+            boolean result = false;
             try {
                 if (mID == 1) {
                     //create calendar
                     //createCalendar("Diary");
                     //save calendar
-                    saveDiary("Diary");
-                    return "저장 완료";
+                    result = saveDiary("Diary");
+                    if (result) {
+                        return "저장 완료";
+                    } else {
+                        return null;
+                    }
                 }
             } catch (Exception e) {
                 mLastError = e;
                 cancel(true);
                 return null;
             }
-
             return null;
         }
 
@@ -972,14 +976,16 @@ public class MainFragment extends Fragment implements EasyPermissions.Permission
 
         @Override
         protected void onPostExecute(String output) {
+            // if successfully saved diary
+            if (output.equals("저장 완료")) {
+                mProgress.hide();
+                //if ( mID == 3 )   mResultText.setText(TextUtils.join("\n\n", eventStrings));
+                Toast.makeText(getContext().getApplicationContext(), output, Toast.LENGTH_SHORT).show();
 
-            mProgress.hide();
-            Toast.makeText(getContext().getApplicationContext(), output, Toast.LENGTH_SHORT).show();
-            //if ( mID == 3 )   mResultText.setText(TextUtils.join("\n\n", eventStrings));
-
-            // stop fragment
-            mFragmentManager.beginTransaction().remove(MainFragment.this).commit();
-            mFragmentManager.popBackStack();
+                // stop fragment
+                mFragmentManager.beginTransaction().remove(MainFragment.this).commit();
+                mFragmentManager.popBackStack();
+            }
         }
 
 

@@ -129,12 +129,20 @@
                     android:layout_height="match_parent"
                     android:layout_weight="30"
                     android:allowUndo="true"
+                    android:autofillHints=""
                     android:cursorVisible="true"
                     android:ems="10"
                     android:gravity="top|left"
                     android:inputType="textMultiLine"
                     tools:text="내용" />
+
             </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="30dp"
+                android:layout_weight="1"
+                android:orientation="horizontal"></LinearLayout>
 
         </LinearLayout>
 
@@ -144,8 +152,10 @@
         android:id="@+id/fab"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|right|end"
+        android:layout_gravity="bottom|end"
         android:clickable="true"
+        android:focusable="true"
         android:src="@android:drawable/ic_menu_save"
         app:backgroundTint="@color/colorPrimary" />
+
 </FrameLayout>
